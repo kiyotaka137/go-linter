@@ -1,0 +1,9 @@
+sensitive_keywords:
+  - password
+  - passwd
+  - token
+  - secret
+  - api_key
+  - apikey
+  - jwt
+  - bearer
