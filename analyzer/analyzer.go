@@ -14,12 +14,17 @@ var Analyzer = &analysis.Analyzer{
 	Run:  run,
 }
 
+var configPath = "config.yaml"
+
+func init() {
+	Analyzer.Flags.StringVar(&configPath, "config", configPath, "path to YAML config file")
+}
+
 func run(pass *analysis.Pass) (interface{}, error) {
-	keywords := config.DefaultSensitiveKeywords
-	if cfg, err := config.Load("config.yaml"); err == nil && len(cfg.SensitiveKeywords) > 0 {
-		keywords = cfg.SensitiveKeywords
+	runtimeCfg := config.DefaultRuntimeConfig()
+	if cfg, err := config.Load(configPath); err == nil {
+		runtimeCfg = config.Resolve(cfg)
 	}
-	keywords = config.NormalizeKeywords(keywords)
 
 	for _, file := range pass.Files {
 		ast.Inspect(file, func(n ast.Node) bool {
@@ -38,15 +43,21 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				return true
 			}
 
-			if keyword, found := rules.FindSensitiveKeyword(msg, keywords); found {
-				pass.Reportf(msgExpr.Pos(), "log message have sensitive keyword %q", keyword)
+			if runtimeCfg.EnableSensitive {
+				if keyword, found := rules.FindSensitiveKeyword(msg, runtimeCfg.SensitiveWords); found {
+					pass.Reportf(msgExpr.Pos(), "log message have sensitive keyword %q", keyword)
+				}
+				if pattern, found := findSensitivePattern(msg, runtimeCfg.SensitivePatterns); found {
+					pass.Reportf(msgExpr.Pos(), "log message matches sensitive pattern %q", pattern)
+				}
 			}
-
-			if !rules.IsLowercase(msg) {
-				pass.Reportf(msgExpr.Pos(), "log message must start with lowercase letter")
+			if runtimeCfg.EnableLowercase && !rules.IsLowercase(msg) {
+				fixed, ok := suggestLowercaseFix(msg)
+				reportWithFix(pass, msgExpr, "log message must start with lowercase letter", fixed, ok)
 			}
-			if !rules.IsWithoutSymbols(msg) {
-				pass.Reportf(msgExpr.Pos(), "log message have forbidden symbols")
+			if runtimeCfg.EnableSymbols && !rules.IsWithoutSymbols(msg) {
+				fixed, ok := suggestSymbolsFix(msg)
+				reportWithFix(pass, msgExpr, "log message have forbidden symbols", fixed, ok)
 			}
 
 			return true

@@ -1,9 +1,18 @@
-sensitive_keywords:
-  - password
-  - passwd
-  - token
-  - secret
-  - api_key
-  - apikey
-  - jwt
-  - bearer
+rules:
+  lowercase:
+    enabled: true
+  symbols:
+    enabled: true
+  sensitive:
+    enabled: true
+    keywords:
+      - password
+      - passwd
+      - token
+      - secret
+      - api_key
+      - apikey
+      - jwt
+      - bearer
+    patterns:
+      - '\b\d{16}\b'

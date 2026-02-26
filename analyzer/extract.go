@@ -36,7 +36,7 @@ func isLogCall(call *ast.CallExpr) bool {
 		return false
 	}
 
-	return ident.Name == "log" || ident.Name == "slog"
+	return ident.Name == "log" || ident.Name == "slog" || ident.Name == "zap"
 }
 
 func extractStaticString(expr ast.Expr) (string, bool) {
